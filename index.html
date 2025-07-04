@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebus Management System</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/auth.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading" class="loading-screen">
+            <div class="spinner"></div>
+            <p>Loading Ebus Management System...</p>
+        </div>
+
+        <!-- Authentication Screen -->
+        <div id="auth-container" class="auth-container hidden">
+            <div class="auth-wrapper">
+                <div class="auth-header">
+                    <div class="logo">
+                        <i class="fas fa-bus"></i>
+                    </div>
+                    <h1>Ebus Management</h1>
+                    <p>Current Location System</p>
+                </div>
+
+                <div class="auth-tabs">
+                    <button class="tab-btn active" data-tab="login">Login</button>
+                    <button class="tab-btn" data-tab="register">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form active">
+                    <h2>Login</h2>
+                    <p>Enter your credentials to access the system</p>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Login</span>
+                            <span class="btn-loading hidden">Logging in...</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form">
+                    <h2>Register</h2>
+                    <p>Create a new account to get started</p>
+                    <form id="registerForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="firstName">First Name</label>
+                                <input type="text" id="firstName" name="firstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastName">Last Name</label>
+                                <input type="text" id="lastName" name="lastName" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" name="phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="role">Role</label>
+                            <select id="role" name="role" required>
+                                <option value="">Select your role</option>
+                                <option value="user">User</option>
+                                <option value="driver">Driver</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Register</span>
+                            <span class="btn-loading hidden">Creating Account...</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-container" class="dashboard-container hidden">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="header-content">
+                    <div class="header-left">
+                        <i class="fas fa-bus"></i>
+                        <h1>Ebus Management</h1>
+                    </div>
+                    <div class="header-right">
+                        <span id="user-info" class="user-info"></span>
+                        <button id="logout-btn" class="btn btn-outline">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-bus"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="total-buses">0</h3>
+                        <p>Total Buses</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="active-routes">0</h3>
+                        <p>Active Routes</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="online-buses">0</h3>
+                        <p>Online Buses</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-section="search">
+                    <i class="fas fa-search"></i>
+                    Search Buses
+                </button>
+                <button class="nav-tab" data-section="buses" id="buses-tab">
+                    <i class="fas fa-bus"></i>
+                    Bus Management
+                </button>
+                <button class="nav-tab" data-section="users" id="users-tab">
+                    <i class="fas fa-users"></i>
+                    User Management
+                </button>
+                <button class="nav-tab" data-section="profile">
+                    <i class="fas fa-user"></i>
+                    Profile
+                </button>
+            </div>
+
+            <!-- Content Sections -->
+            <div class="content-container">
+                <!-- Search Section -->
+                <div id="search-section" class="content-section active">
+                    <div class="section-header">
+                        <h2>Search Bus Location</h2>
+                        <p>Find buses by source and destination to reach bus stops at the correct time</p>
+                    </div>
+
+                    <div class="search-card">
+                        <h3><i class="fas fa-search"></i> Search Buses</h3>
+                        <p>Enter source and/or destination to find available buses</p>
+                        <div class="search-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Source Location</label>
+                                    <input type="text" id="search-source" placeholder="Enter source location" list="source-locations">
+                                    <datalist id="source-locations"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label>Destination Location</label>
+                                    <input type="text" id="search-destination" placeholder="Enter destination location" list="destination-locations">
+                                    <datalist id="destination-locations"></datalist>
+                                </div>
+                            </div>
+                            <div class="search-buttons">
+                                <button id="search-btn" class="btn btn-primary">
+                                    <i class="fas fa-search"></i>
+                                    Search Buses
+                                </button>
+                                <button id="clear-search-btn" class="btn btn-outline">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="search-results" class="search-results"></div>
+                    <div id="all-buses" class="all-buses"></div>
+                </div>
+
+                <!-- Bus Management Section -->
+                <div id="buses-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Bus Management</h2>
+                        <p>Manage your bus fleet and routes</p>
+                        <button id="add-bus-btn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add New Bus
+                        </button>
+                    </div>
+                    <div id="buses-grid" class="buses-grid"></div>
+                </div>
+
+                <!-- User Management Section -->
+                <div id="users-section" class="content-section">
+                    <div class="section-header">
+                        <h2>User Management</h2>
+                        <p>Manage system users and their roles</p>
+                    </div>
+                    <div class="user-stats">
+                        <div class="user-stat">
+                            <h3 id="total-users">0</h3>
+                            <p>Total Users</p>
+                        </div>
+                        <div class="user-stat">
+                            <h3 id="admin-count">0</h3>
+                            <p>Admins</p>
+                        </div>
+                        <div class="user-stat">
+                            <h3 id="driver-count">0</h3>
+                            <p>Drivers</p>
+                        </div>
+                        <div class="user-stat">
+                            <h3 id="user-count">0</h3>
+                            <p>Regular Users</p>
+                        </div>
+                    </div>
+                    <div id="users-grid" class="users-grid"></div>
+                </div>
+
+                <!-- Profile Section -->
+                <div id="profile-section" class="content-section">
+                    <div class="section-header">
+                        <h2>Profile Information</h2>
+                        <p>Your account details</p>
+                    </div>
+                    <div class="profile-card">
+                        <div id="profile-info" class="profile-info"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="bus-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Add New Bus</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="bus-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="busNumber">Bus Number</label>
+                                <input type="text" id="busNumber" name="busNumber" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="busType">Bus Type</label>
+                                <select id="busType" name="busType" required>
+                                    <option value="">Select bus type</option>
+                                    <option value="ac">AC Bus</option>
+                                    <option value="non-ac">Non-AC Bus</option>
+                                    <option value="luxury">Luxury Bus</option>
+                                    <option value="mini">Mini Bus</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="source">Source</label>
+                                <input type="text" id="source" name="source" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="destination">Destination</label>
+                                <input type="text" id="destination" name="destination" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="driverName">Driver Name</label>
+                                <input type="text" id="driverName" name="driverName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="driverPhone">Driver Phone</label>
+                                <input type="tel" id="driverPhone" name="driverPhone" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="capacity">Capacity</label>
+                                <input type="number" id="capacity" name="capacity" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fare">Fare (₹)</label>
+                                <input type="number" id="fare" name="fare" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="departureTime">Departure Time</label>
+                                <input type="time" id="departureTime" name="departureTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="arrivalTime">Arrival Time</label>
+                                <input type="time" id="arrivalTime" name="arrivalTime" required>
+                            </div>
+                        </div>
+                        <div id="edit-fields" class="form-row hidden">
+                            <div class="form-group">
+                                <label for="status">Status</label>
+                                <select id="status" name="status">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="currentLocation">Current Location</label>
+                                <input type="text" id="currentLocation" name="currentLocation">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Save Bus</span>
+                            <span class="btn-loading hidden">Saving...</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/bus-management.js"></script>
+    <script type="module" src="js/user-management.js"></script>
+    <script type="module" src="js/search.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
