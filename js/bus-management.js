@@ -13,6 +13,9 @@ class BusManager {
     this.buses = []
     this.editingBus = null
     this.setupEventListeners()
+
+    // Debug: Check if db is properly initialized
+    console.log("BusManager initialized, db instance:", db)
   }
 
   setupEventListeners() {
@@ -85,6 +88,11 @@ class BusManager {
     const submitBtn = form.querySelector('button[type="submit"]')
     const formData = new FormData(form)
 
+    // Debug logging
+    console.log("Form submission started")
+    console.log("Database instance:", db)
+    console.log("Current user:", window.authManager?.getCurrentUser())
+
     this.setButtonLoading(submitBtn, true)
 
     const busData = {
@@ -101,29 +109,62 @@ class BusManager {
       lastUpdated: new Date().toISOString(),
     }
 
+    console.log("Bus data prepared:", busData)
+
     try {
+      // Check if user is authenticated
+      const currentUser = window.authManager?.getCurrentUser()
+      if (!currentUser) {
+        throw new Error("User not authenticated. Please login again.")
+      }
+
+      // Check if db is initialized
+      if (!db) {
+        throw new Error("Database not initialized. Please refresh the page.")
+      }
+
       if (this.editingBus) {
         // Update existing bus
         busData.status = formData.get("status")
         busData.currentLocation = formData.get("currentLocation")
 
+        console.log("Updating bus:", this.editingBus.id)
         await updateDoc(doc(db, "buses", this.editingBus.id), busData)
         showToast("Bus Updated", `Bus ${busData.busNumber} has been updated.`, "success")
       } else {
         // Add new bus
         busData.status = "active"
         busData.currentLocation = busData.source
-        busData.createdBy = window.authManager.getCurrentUser().uid
+        busData.createdBy = currentUser.uid
         busData.createdAt = new Date().toISOString()
 
-        await addDoc(collection(db, "buses"), busData)
+        console.log("Adding new bus to collection")
+        const busesCollection = collection(db, "buses")
+        console.log("Buses collection reference:", busesCollection)
+
+        const docRef = await addDoc(busesCollection, busData)
+        console.log("Bus added successfully with ID:", docRef.id)
+
         showToast("Bus Added", `Bus ${busData.busNumber} has been added to the system.`, "success")
       }
 
       this.closeBusModal()
     } catch (error) {
       console.error("Error saving bus:", error)
-      showToast("Error", error.message, "error")
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+      })
+
+      let errorMessage = error.message
+      if (error.code === "permission-denied") {
+        errorMessage = "Permission denied. Please check your user role and try again."
+      } else if (error.code === "unavailable") {
+        errorMessage = "Database unavailable. Please check your internet connection."
+      }
+
+      showToast("Error", errorMessage, "error")
     } finally {
       this.setButtonLoading(submitBtn, false)
     }
@@ -132,6 +173,18 @@ class BusManager {
   async deleteBus(busId, busNumber) {
     if (confirm(`Are you sure you want to delete bus ${busNumber}?`)) {
       try {
+        // Check if user is authenticated
+        const currentUser = window.authManager?.getCurrentUser()
+        if (!currentUser) {
+          throw new Error("User not authenticated. Please login again.")
+        }
+
+        // Check if db is initialized
+        if (!db) {
+          throw new Error("Database not initialized. Please refresh the page.")
+        }
+
+        console.log("Deleting bus:", busId)
         await deleteDoc(doc(db, "buses", busId))
         showToast("Bus Deleted", `Bus ${busNumber} has been removed from the system.`, "success")
       } catch (error) {
@@ -144,7 +197,7 @@ class BusManager {
   updateBusesGrid(buses) {
     this.buses = buses
     const grid = document.getElementById("buses-grid")
-    const userProfile = window.authManager.getUserProfile()
+    const userProfile = window.authManager?.getUserProfile()
 
     if (!buses.length) {
       grid.innerHTML = `

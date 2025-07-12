@@ -18,9 +18,11 @@ class AuthManager {
 
   initializeAuth() {
     onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? "User logged in" : "User logged out")
       this.currentUser = user
 
       if (user) {
+        console.log("User UID:", user.uid)
         // User is signed in
         await this.loadUserProfile(user.uid)
         this.showDashboard()
@@ -36,13 +38,55 @@ class AuthManager {
 
   async loadUserProfile(uid) {
     try {
-      const userDoc = await getDoc(doc(db, "users", uid))
-      if (userDoc.exists()) {
-        this.userProfile = userDoc.data()
-        console.log("User profile loaded:", this.userProfile)
+      console.log("Loading user profile for UID:", uid)
+
+      // Add retry logic for profile loading
+      let retries = 3
+      let userDoc = null
+
+      while (retries > 0 && !userDoc?.exists()) {
+        try {
+          userDoc = await getDoc(doc(db, "users", uid))
+          if (userDoc.exists()) {
+            this.userProfile = userDoc.data()
+            console.log("User profile loaded successfully:", this.userProfile)
+            return
+          } else {
+            console.log(`User profile not found, retries left: ${retries - 1}`)
+            retries--
+            if (retries > 0) {
+              await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retry
+            }
+          }
+        } catch (error) {
+          console.error(`Error loading user profile (attempt ${4 - retries}):`, error)
+          retries--
+          if (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retry
+          } else {
+            throw error
+          }
+        }
+      }
+
+      if (!userDoc?.exists()) {
+        console.warn("User profile not found after retries. User may need to complete registration.")
+        // Don't throw error, just show a warning
+        showToast("Profile Incomplete", "Please complete your profile setup.", "error")
       }
     } catch (error) {
       console.error("Error loading user profile:", error)
+
+      // Handle specific error cases
+      if (error.code === "permission-denied") {
+        showToast("Permission Error", "Please check Firestore security rules and try logging in again.", "error")
+        // Force logout on permission error
+        await this.handleLogout()
+      } else if (error.code === "unavailable") {
+        showToast("Connection Error", "Database unavailable. Please check your internet connection.", "error")
+      } else {
+        showToast("Profile Error", "Failed to load user profile. Please try again.", "error")
+      }
     }
   }
 
@@ -93,14 +137,28 @@ class AuthManager {
     const email = form.email.value
     const password = form.password.value
 
+    console.log("Login attempt for email:", email)
     this.setButtonLoading(submitBtn, true)
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      console.log("Login successful for user:", userCredential.user.uid)
       showToast("Login Successful", "Welcome back!", "success")
     } catch (error) {
       console.error("Login error:", error)
-      showToast("Login Failed", error.message, "error")
+
+      let errorMessage = error.message
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email address."
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password. Please try again."
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address format."
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later."
+      }
+
+      showToast("Login Failed", errorMessage, "error")
     } finally {
       this.setButtonLoading(submitBtn, false)
     }
@@ -113,25 +171,69 @@ class AuthManager {
     const submitBtn = form.querySelector('button[type="submit"]')
     const formData = new FormData(form)
 
+    console.log("Registration attempt for email:", formData.get("email"))
     this.setButtonLoading(submitBtn, true)
 
     try {
+      // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, formData.get("email"), formData.get("password"))
 
-      // Save user profile to Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
+      console.log("User account created:", userCredential.user.uid)
+
+      // Prepare user profile data
+      const userProfileData = {
         firstName: formData.get("firstName"),
         lastName: formData.get("lastName"),
         email: formData.get("email"),
         role: formData.get("role"),
         phone: formData.get("phone"),
         createdAt: new Date().toISOString(),
-      })
+        lastUpdated: new Date().toISOString(),
+      }
+
+      console.log("Saving user profile:", userProfileData)
+
+      // Save user profile to Firestore with retry logic
+      let retries = 3
+      let profileSaved = false
+
+      while (retries > 0 && !profileSaved) {
+        try {
+          await setDoc(doc(db, "users", userCredential.user.uid), userProfileData)
+          profileSaved = true
+          console.log("User profile saved successfully")
+        } catch (profileError) {
+          console.error(`Error saving profile (attempt ${4 - retries}):`, profileError)
+          retries--
+          if (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retry
+          } else {
+            throw profileError
+          }
+        }
+      }
 
       showToast("Registration Successful", "Your account has been created!", "success")
+
+      // Clear form
+      form.reset()
     } catch (error) {
       console.error("Registration error:", error)
-      showToast("Registration Failed", error.message, "error")
+
+      let errorMessage = error.message
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "An account with this email already exists."
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Password should be at least 6 characters long."
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address format."
+      } else if (error.code === "permission-denied") {
+        errorMessage = "Permission denied. Please check Firestore security rules."
+      } else if (error.code === "unavailable") {
+        errorMessage = "Database unavailable. Please check your internet connection."
+      }
+
+      showToast("Registration Failed", errorMessage, "error")
     } finally {
       this.setButtonLoading(submitBtn, false)
     }
@@ -140,6 +242,7 @@ class AuthManager {
   async handleLogout() {
     try {
       await signOut(auth)
+      console.log("User logged out successfully")
       showToast("Logged Out", "You have been logged out successfully.", "success")
     } catch (error) {
       console.error("Logout error:", error)
@@ -172,6 +275,8 @@ class AuthManager {
     if (this.userProfile) {
       document.getElementById("user-info").textContent =
         `Welcome, ${this.userProfile.firstName} (${this.userProfile.role})`
+    } else {
+      document.getElementById("user-info").textContent = "Welcome, User"
     }
   }
 

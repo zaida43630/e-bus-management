@@ -1,7 +1,7 @@
 // Main application initialization
 import authManager from "./auth.js"
 import dashboardManager from "./dashboard.js"
-import { showToast } from "./utils.js" // Declare the showToast variable
+import { showToast } from "./utils.js"
 
 class App {
   constructor() {
@@ -11,11 +11,11 @@ class App {
   init() {
     console.log("Ebus Management System initialized")
 
-    // Wait for auth state to be determined
+    // Wait for Firebase to initialize and auth state to be determined
     setTimeout(() => {
       this.setupGlobalEventListeners()
       this.updateUIBasedOnRole()
-    }, 1000)
+    }, 2000) // Increased timeout to ensure Firebase is fully loaded
   }
 
   setupGlobalEventListeners() {
@@ -66,8 +66,9 @@ class App {
   }
 }
 
-// Initialize the application
+// Initialize the application when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOM loaded, initializing app...")
   new App()
 })
 
